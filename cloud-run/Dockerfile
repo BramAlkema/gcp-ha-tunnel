@@ -5,7 +5,7 @@
 FROM alpine:3.18
 
 # Install dependencies
-RUN apk add --no-cache nginx supervisor curl python3 py3-pip \
+RUN apk add --no-cache nginx supervisor curl python3 py3-pip gettext \
     && pip3 install --no-cache-dir --break-system-packages \
         flask \
         requests
