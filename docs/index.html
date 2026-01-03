@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Assistant Edge</title>
+    <style>
+        :root {
+            --primary: #03a9f4;
+            --success: #18bc9c;
+            --bg: #0d1117;
+            --card: #161b22;
+            --text: #e6edf3;
+            --muted: #8b949e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+
+        header { text-align: center; padding: 60px 0; }
+        h1 { font-size: 3rem; margin-bottom: 16px; }
+        .tagline { font-size: 1.25rem; color: var(--muted); margin-bottom: 32px; }
+
+        .badges { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 40px; }
+        .badge {
+            background: var(--card);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .badge.free { border: 1px solid var(--success); color: var(--success); }
+
+        .cta { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+        .btn {
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-secondary { background: var(--card); color: var(--text); border: 1px solid #30363d; }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 60px 0;
+        }
+        .feature {
+            background: var(--card);
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #30363d;
+        }
+        .feature h3 { margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .feature p { color: var(--muted); font-size: 14px; }
+
+        .diagram {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 32px;
+            margin: 40px 0;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            overflow-x: auto;
+            border: 1px solid #30363d;
+        }
+        .diagram pre { color: var(--muted); }
+
+        .section { margin: 60px 0; }
+        .section h2 { font-size: 1.75rem; margin-bottom: 24px; text-align: center; }
+
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #30363d; }
+        th { color: var(--muted); font-weight: 500; }
+
+        .support {
+            background: linear-gradient(135deg, rgba(24, 188, 156, 0.1), rgba(3, 169, 244, 0.1));
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+            margin: 60px 0;
+        }
+        .support h3 { margin-bottom: 12px; }
+        .support p { color: var(--muted); margin-bottom: 20px; }
+        .support .btn { margin: 0 8px; }
+
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+        footer a { color: var(--primary); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Home Assistant Edge</h1>
+            <p class="tagline">Stateless edge companion for Home Assistant.<br>Voice control, remote access, smart caching — all on Google Cloud free tier.</p>
+
+            <div class="badges">
+                <span class="badge free">$0/month</span>
+                <span class="badge">No port forwarding</span>
+                <span class="badge">Google Assistant</span>
+                <span class="badge">Amazon Alexa</span>
+                <span class="badge">Remote UI</span>
+            </div>
+
+            <div class="cta">
+                <a href="https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2FBramAlkema%2Fha-edge" class="btn btn-primary">
+                    Install Add-on
+                </a>
+                <a href="https://github.com/BramAlkema/ha-edge" class="btn btn-secondary">
+                    View on GitHub
+                </a>
+            </div>
+        </header>
+
+        <div class="diagram">
+<pre>
+┌─────────────────────────────────────┐
+│      YOUR GOOGLE CLOUD PROJECT      │
+│                                     │
+│   ┌─────────┐      ┌─────────┐     │
+│   │ BOUNCER │      │ BUTLER  │     │
+│   │ Security│      │ Cache   │     │
+│   └────┬────┘      └────┬────┘     │
+│        └───────┬────────┘          │
+└────────────────┼───────────────────┘
+                 │ tunnel
+         ┌───────▼───────┐
+         │ HOME ASSISTANT │
+         └───────────────┘
+</pre>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <h3>🎙️ Google Assistant</h3>
+                <p>"Hey Google, turn on the lights" — full smart home integration with Local Home SDK support.</p>
+            </div>
+            <div class="feature">
+                <h3>🔊 Amazon Alexa</h3>
+                <p>"Alexa, set thermostat to 20" — guided setup with AWS CloudShell script.</p>
+            </div>
+            <div class="feature">
+                <h3>📱 Remote UI</h3>
+                <p>Access your Home Assistant dashboard from anywhere. Toggle on/off from add-on config.</p>
+            </div>
+            <div class="feature">
+                <h3>🔒 Bouncer</h3>
+                <p>Rate limiting, auth validation, request filtering. Security at the edge.</p>
+            </div>
+            <div class="feature">
+                <h3>🤵 Butler</h3>
+                <p>SYNC caching, offline fallback, request logging. Intelligence at the edge.</p>
+            </div>
+            <div class="feature">
+                <h3>🚀 One-Click Deploy</h3>
+                <p>Upload service account key, click Deploy. Cloud Run handles the rest.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Free Tier Budget</h2>
+            <table>
+                <tr>
+                    <th>Resource</th>
+                    <th>Free/Month</th>
+                    <th>Typical Use</th>
+                    <th>Headroom</th>
+                </tr>
+                <tr>
+                    <td>Requests</td>
+                    <td>2,000,000</td>
+                    <td>~50,000</td>
+                    <td>40x</td>
+                </tr>
+                <tr>
+                    <td>CPU</td>
+                    <td>180,000 vCPU-sec</td>
+                    <td>~10,000</td>
+                    <td>18x</td>
+                </tr>
+                <tr>
+                    <td>Memory</td>
+                    <td>360,000 GiB-sec</td>
+                    <td>~50,000</td>
+                    <td>7x</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="support">
+            <h3>Support Home Assistant Development</h3>
+            <p>This project is free, but Home Assistant isn't built for free.<br>Nabu Casa funds the core developers. Consider supporting them!</p>
+            <a href="https://www.nabucasa.com/" class="btn btn-primary" style="background: var(--success);">Subscribe to Nabu Casa</a>
+            <a href="https://www.home-assistant.io/donate" class="btn btn-secondary">One-time Donation</a>
+        </div>
+
+        <footer>
+            <p>
+                <a href="https://github.com/BramAlkema/ha-edge">GitHub</a> ·
+                <a href="https://github.com/BramAlkema/ha-edge/blob/main/ROADMAP.md">Roadmap</a> ·
+                MIT License
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
