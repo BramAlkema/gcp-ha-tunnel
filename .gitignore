@@ -1,0 +1,27 @@
+# Output directory with sensitive files
+output/
+
+# Credentials
+*.json
+!package.json
+tunnel_config.env
+addon_options.yaml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+.env
+venv/
+
+# Logs
+*.log

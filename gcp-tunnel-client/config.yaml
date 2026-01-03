@@ -1,0 +1,52 @@
+# Home Assistant Add-on: GCP Tunnel Client
+# https://developers.home-assistant.io/docs/add-ons/configuration
+
+name: GCP Tunnel Client
+version: "1.0.0"
+slug: gcp_tunnel_client
+description: >-
+  Secure tunnel to Google Cloud Run for external Home Assistant access.
+  No port forwarding required. Supports Google Assistant integration.
+url: https://github.com/BramAlkema/gcp-ha-tunnel
+image: ghcr.io/bramalkema/gcp-tunnel-client-{arch}
+arch:
+  - aarch64
+  - amd64
+  - armv7
+  - armhf
+  - i386
+startup: system
+boot: auto
+init: false
+
+# Options with defaults
+options:
+  server_url: ""
+  auth_user: "hauser"
+  auth_pass: ""
+  local_port: 8123
+  keepalive: "25s"
+  log_level: "info"
+
+# Schema validation
+schema:
+  server_url: url
+  auth_user: str
+  auth_pass: password
+  local_port: int(1,65535)
+  keepalive: match(^\d+[smh]$)
+  log_level: list(debug|info|warning|error)
+
+# No ports exposed - outbound tunnel only
+ports: {}
+ports_description: {}
+
+# Network access required for tunnel
+host_network: false
+
+# Map config folder for potential future use
+map:
+  - config:ro
+
+# Watchdog to restart on failure
+watchdog: tcp://[HOST]:[PORT:8123]
