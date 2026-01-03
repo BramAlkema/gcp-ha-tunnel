@@ -2,11 +2,11 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration
 
 name: GCP Tunnel Client
-version: "1.0.0"
+version: "1.1.0"
 slug: gcp_tunnel_client
 description: >-
   Secure tunnel to Google Cloud Run for external Home Assistant access.
-  No port forwarding required. Supports Google Assistant integration.
+  No port forwarding required. One-click setup with Google Assistant integration.
 url: https://github.com/BramAlkema/gcp-ha-tunnel
 arch:
   - aarch64
@@ -18,6 +18,13 @@ startup: system
 boot: auto
 init: false
 
+# Web UI for setup
+ingress: true
+ingress_port: 8099
+ingress_stream: false
+panel_icon: mdi:cloud-sync
+panel_title: GCP Tunnel
+
 # Options with defaults
 options:
   server_url: ""
@@ -26,30 +33,21 @@ options:
   local_port: 8123
   keepalive: "25s"
   log_level: "info"
-  # Google Assistant auto-configuration (optional)
   google_project_id: ""
   google_secure_devices_pin: ""
 
-# Schema validation
+# Schema validation - make most fields optional for auto-setup
 schema:
-  server_url: url
-  auth_user: str
-  auth_pass: password
-  local_port: int(1,65535)
-  keepalive: match(^\d+[smh]$)
-  log_level: list(debug|info|warning|error)
+  server_url: url?
+  auth_user: str?
+  auth_pass: password?
+  local_port: int(1,65535)?
+  keepalive: match(^\d+[smh]$)?
+  log_level: list(debug|info|warning|error)?
   google_project_id: str?
   google_secure_devices_pin: str?
 
-# No ports exposed - outbound tunnel only
-ports: {}
-ports_description: {}
-
-# Network access required for tunnel
-# Use normal Docker networking - connects to HA Core via internal DNS
-# host_network: true  # Disabled - internal networking works better
-
-# Map config folder with write access for packages
+# Map config folder with write access
 map:
   - config:rw
 

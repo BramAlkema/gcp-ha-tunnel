@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GCP Tunnel Setup</title>
+    <style>
+        :root {
+            --primary: #03a9f4;
+            --success: #4caf50;
+            --error: #f44336;
+            --bg: #1c1c1c;
+            --card: #2d2d2d;
+            --text: #ffffff;
+            --text-muted: #9e9e9e;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        h1 svg { width: 32px; height: 32px; fill: var(--primary); }
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+        .step {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 16px 0;
+            border-bottom: 1px solid #404040;
+        }
+        .step:last-child { border-bottom: none; }
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #404040;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        .step-number.active { background: var(--primary); }
+        .step-number.complete { background: var(--success); }
+        .step-content { flex: 1; }
+        .step-title { font-weight: 600; margin-bottom: 4px; }
+        .step-desc { color: var(--text-muted); font-size: 14px; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        .btn-google {
+            background: white;
+            color: #333;
+        }
+        .btn-google svg { width: 20px; height: 20px; }
+        .status {
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+        .status.success { background: rgba(76, 175, 80, 0.2); }
+        .status.error { background: rgba(244, 67, 54, 0.2); }
+        .status.info { background: rgba(3, 169, 244, 0.2); }
+        .config-box {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 14px;
+            margin-top: 16px;
+            overflow-x: auto;
+        }
+        .config-box .label {
+            color: var(--primary);
+        }
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ffffff40;
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .billing-select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #404040;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 16px;
+            margin: 12px 0;
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>
+                <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
+                GCP Tunnel Setup
+            </h1>
+            <p class="subtitle">Connect Home Assistant to Google Cloud in one click</p>
+
+            <div id="steps">
+                <div class="step" id="step1">
+                    <div class="step-number {% if has_token %}complete{% elif state.step == 'start' %}active{% endif %}">
+                        {% if has_token %}✓{% else %}1{% endif %}
+                    </div>
+                    <div class="step-content">
+                        <div class="step-title">Sign in with Google</div>
+                        <div class="step-desc">Authorize access to deploy Cloud Run</div>
+                        {% if not has_token %}
+                        <div style="margin-top: 12px">
+                            <a href="{{ ingress_path }}/auth/start" class="btn btn-google">
+                                <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                                Sign in with Google
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="step" id="step2">
+                    <div class="step-number {% if state.step == 'complete' %}complete{% elif has_token and state.step != 'complete' %}active{% endif %}">
+                        {% if state.step == 'complete' %}✓{% else %}2{% endif %}
+                    </div>
+                    <div class="step-content">
+                        <div class="step-title">Deploy to Google Cloud</div>
+                        <div class="step-desc">Auto-create project and deploy tunnel server</div>
+                        {% if has_token and state.step != 'complete' %}
+                        <div style="margin-top: 12px">
+                            <div id="billing-section" class="hidden">
+                                <select id="billing-select" class="billing-select">
+                                    <option value="">Loading billing accounts...</option>
+                                </select>
+                            </div>
+                            <button id="deploy-btn" class="btn btn-primary" onclick="runSetup()">
+                                Deploy Automatically
+                            </button>
+                            <div id="deploy-status" class="hidden"></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="step" id="step3">
+                    <div class="step-number {% if state.step == 'complete' %}complete{% endif %}">
+                        {% if state.step == 'complete' %}✓{% else %}3{% endif %}
+                    </div>
+                    <div class="step-content">
+                        <div class="step-title">Connect Google Assistant</div>
+                        <div class="step-desc">Link your smart home devices</div>
+                        {% if state.step == 'complete' %}
+                        <div class="status success">
+                            <strong>Setup Complete!</strong><br>
+                            Tunnel is running. Configure Google Actions Console:
+                        </div>
+                        <div class="config-box">
+                            <span class="label">Fulfillment URL:</span><br>
+                            {{ state.server_url }}/api/google_assistant<br><br>
+                            <span class="label">Authorization URL:</span><br>
+                            {{ state.server_url }}/auth/authorize<br><br>
+                            <span class="label">Token URL:</span><br>
+                            {{ state.server_url }}/auth/token<br><br>
+                            <span class="label">Client ID:</span><br>
+                            https://oauth-redirect.googleusercontent.com/r/{{ state.project_id }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ingressPath = "{{ ingress_path }}";
+
+        async function loadBillingAccounts() {
+            try {
+                const resp = await fetch(ingressPath + '/api/billing-accounts');
+                const data = await resp.json();
+
+                if (data.accounts && data.accounts.length > 0) {
+                    const select = document.getElementById('billing-select');
+                    select.innerHTML = '<option value="">Select a billing account</option>';
+                    data.accounts.forEach(acc => {
+                        const opt = document.createElement('option');
+                        opt.value = acc.name;
+                        opt.textContent = acc.displayName;
+                        select.appendChild(opt);
+                    });
+                    document.getElementById('billing-section').classList.remove('hidden');
+                }
+            } catch (e) {
+                console.error('Failed to load billing accounts:', e);
+            }
+        }
+
+        async function runSetup() {
+            const btn = document.getElementById('deploy-btn');
+            const status = document.getElementById('deploy-status');
+            const billingAccount = document.getElementById('billing-select')?.value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loader"></span> Deploying...';
+            status.className = 'status info';
+            status.innerHTML = 'Creating project and deploying to Cloud Run...';
+            status.classList.remove('hidden');
+
+            try {
+                const resp = await fetch(ingressPath + '/api/setup', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({billing_account: billingAccount})
+                });
+
+                const data = await resp.json();
+
+                if (data.success) {
+                    status.className = 'status success';
+                    status.innerHTML = 'Success! Restarting add-on...';
+                    setTimeout(() => location.reload(), 3000);
+                } else if (data.billing_required) {
+                    status.className = 'status error';
+                    status.innerHTML = 'Please select a billing account or <a href="https://console.cloud.google.com/billing" target="_blank" style="color: var(--primary)">create one</a>.';
+                    btn.disabled = false;
+                    btn.innerHTML = 'Deploy Automatically';
+                } else {
+                    status.className = 'status error';
+                    status.innerHTML = 'Error: ' + (data.error || 'Unknown error');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Retry';
+                }
+            } catch (e) {
+                status.className = 'status error';
+                status.innerHTML = 'Error: ' + e.message;
+                btn.disabled = false;
+                btn.innerHTML = 'Retry';
+            }
+        }
+
+        // Load billing accounts if authenticated
+        {% if has_token and state.step != 'complete' %}
+        loadBillingAccounts();
+        {% endif %}
+    </script>
+</body>
+</html>

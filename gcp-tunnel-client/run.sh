@@ -218,11 +218,24 @@ read_config() {
     KEEPALIVE=$(bashio::config 'keepalive')
     LOG_LEVEL=$(bashio::config 'log_level')
 
-    # If no server_url, show setup instructions
+    # If no server_url, wait for web UI setup
     if bashio::var.is_empty "$SERVER_URL"; then
-        show_setup_instructions
-        # Re-read after setup
-        SERVER_URL=$(bashio::config 'server_url')
+        bashio::log.info "========================================"
+        bashio::log.info "    SETUP REQUIRED"
+        bashio::log.info "========================================"
+        bashio::log.info ""
+        bashio::log.info "Open the GCP Tunnel panel in Home Assistant"
+        bashio::log.info "to complete one-click setup with Google."
+        bashio::log.info ""
+        bashio::log.info "Waiting for setup to complete..."
+
+        # Wait for configuration via web UI
+        while bashio::var.is_empty "$SERVER_URL"; do
+            sleep 10
+            SERVER_URL=$(bashio::config 'server_url')
+        done
+
+        bashio::log.info "Configuration detected! Starting tunnel..."
         AUTH_PASS=$(bashio::config 'auth_pass')
     fi
 
@@ -370,11 +383,23 @@ run_tunnel() {
     return $exit_code
 }
 
+# Start the setup web UI
+start_webapp() {
+    bashio::log.info "Starting setup web UI on port 8099..."
+    cd /webapp
+    python3 app.py &
+    webapp_pid=$!
+    bashio::log.info "Web UI started (pid: $webapp_pid)"
+}
+
 # Main loop
 main() {
     bashio::log.info "========================================"
     bashio::log.info "GCP Tunnel Client starting"
     bashio::log.info "========================================"
+
+    # Always start the web UI for setup/status
+    start_webapp
 
     # Verify chisel binary
     if ! command -v /usr/local/bin/chisel &>/dev/null; then

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - GCP Tunnel</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #1c1c1c;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .error-card {
+            background: #2d2d2d;
+            padding: 32px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+        }
+        h1 { color: #f44336; margin-bottom: 16px; }
+        p { color: #9e9e9e; margin-bottom: 24px; }
+        a {
+            color: #03a9f4;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <h1>Authentication Error</h1>
+        <p>{{ error }}</p>
+        <a href="/">← Back to Setup</a>
+    </div>
+</body>
+</html>

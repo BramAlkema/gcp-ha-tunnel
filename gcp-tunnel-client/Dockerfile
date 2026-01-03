@@ -1,5 +1,5 @@
 # GCP Tunnel Client Add-on for Home Assistant
-# Runs chisel client to connect to Cloud Run tunnel server
+# One-click Google Cloud setup with tunnel client
 
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
@@ -11,13 +11,16 @@ ARG CHISEL_VERSION=1.9.1
 ARG TARGETARCH
 ARG TARGETVARIANT
 
-# Install dependencies and chisel
-# nginx proxies HTTP->HTTPS to HA Core (which requires SSL)
+# Install dependencies
 RUN apk add --no-cache \
         curl \
         ca-certificates \
         jq \
         nginx \
+        python3 \
+        py3-pip \
+        py3-flask \
+        py3-requests \
     && case "${TARGETARCH}${TARGETVARIANT}" in \
         "amd64") CHISEL_ARCH="amd64" ;; \
         "arm64") CHISEL_ARCH="arm64" ;; \
@@ -26,22 +29,20 @@ RUN apk add --no-cache \
         "arm"*) CHISEL_ARCH="armv7" ;; \
         *) echo "Unsupported arch: ${TARGETARCH}${TARGETVARIANT}" && exit 1 ;; \
     esac \
-    # Download chisel with checksum verification
     && CHISEL_URL="https://github.com/jpillora/chisel/releases/download/v${CHISEL_VERSION}/chisel_${CHISEL_VERSION}_linux_${CHISEL_ARCH}.gz" \
     && echo "Downloading chisel from: ${CHISEL_URL}" \
     && curl -fsSL "${CHISEL_URL}" -o /tmp/chisel.gz \
     && gunzip /tmp/chisel.gz \
     && mv /tmp/chisel /usr/local/bin/chisel \
     && chmod +x /usr/local/bin/chisel \
-    # Verify binary works
     && /usr/local/bin/chisel --version \
-    # Cleanup
     && rm -rf /tmp/*
 
-# Copy run script and nginx config
+# Copy files
 COPY run.sh /run.sh
 COPY nginx.conf /etc/nginx/nginx.conf
-RUN chmod +x /run.sh && mkdir -p /tmp/nginx-client-body
+COPY webapp /webapp
+RUN chmod +x /run.sh && mkdir -p /tmp/nginx-client-body /data
 
 # Health check - verify chisel binary exists and is executable
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
