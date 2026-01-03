@@ -86,11 +86,11 @@ Set `remote_ui_enabled: true` in add-on config to access your HA dashboard from 
 
 ```
 ha-edge/
-├── gcp-tunnel-client/     # HA Add-on (client)
+├── addon/                 # HA Add-on (client)
 │   ├── webapp/            # Setup wizard UI
 │   ├── run.sh             # Tunnel + HA config
 │   └── nginx.conf         # HTTP→HTTPS proxy
-├── cloud-run/             # Edge server
+├── server/                # Edge server (Cloud Run)
 │   ├── edge_proxy.py      # Bouncer + Butler
 │   ├── nginx.conf         # Routing + OAuth fixes
 │   └── static/            # Privacy policy, Local SDK

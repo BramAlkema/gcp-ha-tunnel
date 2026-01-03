@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# GCP Home Assistant Tunnel - Zero-Config Setup
+# Home Assistant Edge - Zero-Config Setup
 #
 # Just run it. No prompts. Outputs exactly what to paste where.
 #
@@ -14,7 +14,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLOUD_RUN_DIR="$(dirname "$SCRIPT_DIR")/cloud-run"
+SERVER_DIR="$(dirname "$SCRIPT_DIR")/server"
 
 # Auto-generate everything
 PROJECT_ID="${PROJECT_ID:-ha-tunnel-$(date +%s | tail -c 7)}"
@@ -26,7 +26,7 @@ AUTH_PASS=$(openssl rand -base64 24)
 
 echo -e "${BLUE}"
 echo "╔═══════════════════════════════════════════════════════════════╗"
-echo "║          GCP Home Assistant Tunnel - Auto Setup               ║"
+echo "║             Home Assistant Edge - Auto Setup                  ║"
 echo "╚═══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -74,7 +74,7 @@ gcloud secrets add-iam-policy-binding "$SECRET_NAME" \
 
 echo -e "${YELLOW}Deploying Cloud Run (this takes ~2 minutes)...${NC}"
 gcloud run deploy "$SERVICE_NAME" \
-    --source="$CLOUD_RUN_DIR" \
+    --source="$SERVER_DIR" \
     --region="$REGION" \
     --allow-unauthenticated \
     --set-secrets="AUTH=${SECRET_NAME}:latest" \
@@ -93,7 +93,7 @@ echo -e "╚══════════════════════�
 echo ""
 echo -e "${CYAN}═══ STEP 1: HA Add-on Configuration ═══${NC}"
 echo ""
-echo -e "Paste into GCP Tunnel Client add-on settings:"
+echo -e "Paste into HA Edge add-on settings:"
 echo ""
 echo -e "${YELLOW}server_url:${NC} ${SERVICE_URL}"
 echo -e "${YELLOW}auth_user:${NC} ${AUTH_USER}"

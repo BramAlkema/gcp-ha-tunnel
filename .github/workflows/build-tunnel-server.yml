@@ -1,10 +1,10 @@
-name: Build Tunnel Server
+name: Build Server
 
 on:
   push:
     branches: [main]
     paths:
-      - 'cloud-run/**'
+      - 'server/**'
       - '.github/workflows/build-tunnel-server.yml'
   release:
     types: [published]
@@ -12,7 +12,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/tunnel-server
+  IMAGE_NAME: ${{ github.repository }}/server
 
 jobs:
   build:
@@ -51,7 +51,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./cloud-run
+          context: ./server
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
