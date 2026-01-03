@@ -19,8 +19,10 @@ RUN apk add --no-cache \
         nginx \
         python3 \
         py3-pip \
-        py3-flask \
-        py3-requests \
+    && pip3 install --no-cache-dir --break-system-packages \
+        flask \
+        requests \
+        google-auth \
     && case "${TARGETARCH}${TARGETVARIANT}" in \
         "amd64") CHISEL_ARCH="amd64" ;; \
         "arm64") CHISEL_ARCH="arm64" ;; \

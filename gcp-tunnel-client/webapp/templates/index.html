@@ -22,10 +22,7 @@
             min-height: 100vh;
             padding: 20px;
         }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
+        .container { max-width: 700px; margin: 0 auto; }
         .card {
             background: var(--card);
             border-radius: 12px;
@@ -40,10 +37,7 @@
             gap: 12px;
         }
         h1 svg { width: 32px; height: 32px; fill: var(--primary); }
-        .subtitle {
-            color: var(--text-muted);
-            margin-bottom: 24px;
-        }
+        .subtitle { color: var(--text-muted); margin-bottom: 24px; }
         .step {
             display: flex;
             align-items: flex-start;
@@ -79,18 +73,40 @@
             cursor: pointer;
             border: none;
             transition: opacity 0.2s;
+            text-decoration: none;
         }
         .btn:hover { opacity: 0.9; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-primary {
-            background: var(--primary);
-            color: white;
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-secondary { background: #404040; color: white; }
+        .instructions {
+            background: #1a1a1a;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+            font-size: 14px;
         }
-        .btn-google {
-            background: white;
-            color: #333;
+        .instructions ol { padding-left: 20px; }
+        .instructions li { margin: 8px 0; }
+        .instructions code {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
         }
-        .btn-google svg { width: 20px; height: 20px; }
+        .instructions a { color: var(--primary); }
+        .file-upload {
+            border: 2px dashed #404040;
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+            margin: 12px 0;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .file-upload:hover { border-color: var(--primary); }
+        .file-upload.dragover { border-color: var(--primary); background: rgba(3, 169, 244, 0.1); }
+        .file-upload input { display: none; }
         .status {
             padding: 16px;
             border-radius: 8px;
@@ -104,13 +120,11 @@
             border-radius: 8px;
             padding: 16px;
             font-family: monospace;
-            font-size: 14px;
+            font-size: 13px;
             margin-top: 16px;
             overflow-x: auto;
         }
-        .config-box .label {
-            color: var(--primary);
-        }
+        .config-box .label { color: var(--primary); }
         .loader {
             display: inline-block;
             width: 20px;
@@ -120,20 +134,17 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .billing-select {
-            width: 100%;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #404040;
-            background: var(--bg);
-            color: var(--text);
-            font-size: 16px;
-            margin: 12px 0;
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .hidden { display: none; }
+        .project-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 14px;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -143,74 +154,97 @@
                 <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
                 GCP Tunnel Setup
             </h1>
-            <p class="subtitle">Connect Home Assistant to Google Cloud in one click</p>
+            <p class="subtitle">Connect Home Assistant to Google Cloud</p>
 
-            <div id="steps">
-                <div class="step" id="step1">
-                    <div class="step-number {% if has_token %}complete{% elif state.step == 'start' %}active{% endif %}">
-                        {% if has_token %}✓{% else %}1{% endif %}
-                    </div>
-                    <div class="step-content">
-                        <div class="step-title">Sign in with Google</div>
-                        <div class="step-desc">Authorize access to deploy Cloud Run</div>
-                        {% if not has_token %}
-                        <div style="margin-top: 12px">
-                            <a href="{{ ingress_path }}/auth/start" class="btn btn-google">
-                                <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                                Sign in with Google
-                            </a>
-                        </div>
-                        {% endif %}
-                    </div>
+            <!-- Step 1: Create Service Account -->
+            <div class="step">
+                <div class="step-number {% if has_key %}complete{% else %}active{% endif %}">
+                    {% if has_key %}✓{% else %}1{% endif %}
                 </div>
+                <div class="step-content">
+                    <div class="step-title">Create Service Account</div>
+                    <div class="step-desc">One-time setup in Google Cloud Console</div>
 
-                <div class="step" id="step2">
-                    <div class="step-number {% if state.step == 'complete' %}complete{% elif has_token and state.step != 'complete' %}active{% endif %}">
-                        {% if state.step == 'complete' %}✓{% else %}2{% endif %}
+                    {% if not has_key %}
+                    <div class="instructions">
+                        <ol>
+                            <li>Go to <a href="https://console.cloud.google.com/projectcreate" target="_blank">Create a GCP Project</a></li>
+                            <li>Enable billing for the project</li>
+                            <li>Go to <a href="https://console.cloud.google.com/iam-admin/serviceaccounts/create" target="_blank">Create Service Account</a></li>
+                            <li>Name it <code>ha-tunnel</code></li>
+                            <li>Grant roles: <code>Cloud Run Admin</code> and <code>Service Account User</code></li>
+                            <li>Click the service account → Keys → Add Key → Create new key → JSON</li>
+                            <li>Upload the downloaded JSON file below</li>
+                        </ol>
                     </div>
-                    <div class="step-content">
-                        <div class="step-title">Deploy to Google Cloud</div>
-                        <div class="step-desc">Auto-create project and deploy tunnel server</div>
-                        {% if has_token and state.step != 'complete' %}
-                        <div style="margin-top: 12px">
-                            <div id="billing-section" class="hidden">
-                                <select id="billing-select" class="billing-select">
-                                    <option value="">Loading billing accounts...</option>
-                                </select>
-                            </div>
-                            <button id="deploy-btn" class="btn btn-primary" onclick="runSetup()">
-                                Deploy Automatically
-                            </button>
-                            <div id="deploy-status" class="hidden"></div>
-                        </div>
-                        {% endif %}
+
+                    <div class="file-upload" id="dropzone">
+                        <input type="file" id="keyfile" accept=".json">
+                        <p>📁 Drop service account JSON here or click to browse</p>
                     </div>
+                    <div id="upload-status"></div>
+                    {% else %}
+                    <div class="project-badge">{{ project_id }}</div>
+                    {% endif %}
                 </div>
+            </div>
 
-                <div class="step" id="step3">
-                    <div class="step-number {% if state.step == 'complete' %}complete{% endif %}">
-                        {% if state.step == 'complete' %}✓{% else %}3{% endif %}
+            <!-- Step 2: Deploy -->
+            <div class="step">
+                <div class="step-number {% if state.step == 'complete' %}complete{% elif has_key %}active{% endif %}">
+                    {% if state.step == 'complete' %}✓{% else %}2{% endif %}
+                </div>
+                <div class="step-content">
+                    <div class="step-title">Deploy Tunnel Server</div>
+                    <div class="step-desc">Automatic Cloud Run deployment</div>
+
+                    {% if has_key and state.step != 'complete' %}
+                    <div style="margin-top: 12px">
+                        <button id="deploy-btn" class="btn btn-primary" onclick="runDeploy()">
+                            🚀 Deploy to Google Cloud
+                        </button>
+                        <div id="deploy-status"></div>
                     </div>
-                    <div class="step-content">
-                        <div class="step-title">Connect Google Assistant</div>
-                        <div class="step-desc">Link your smart home devices</div>
-                        {% if state.step == 'complete' %}
-                        <div class="status success">
-                            <strong>Setup Complete!</strong><br>
-                            Tunnel is running. Configure Google Actions Console:
-                        </div>
-                        <div class="config-box">
-                            <span class="label">Fulfillment URL:</span><br>
-                            {{ state.server_url }}/api/google_assistant<br><br>
-                            <span class="label">Authorization URL:</span><br>
-                            {{ state.server_url }}/auth/authorize<br><br>
-                            <span class="label">Token URL:</span><br>
-                            {{ state.server_url }}/auth/token<br><br>
-                            <span class="label">Client ID:</span><br>
-                            https://oauth-redirect.googleusercontent.com/r/{{ state.project_id }}
-                        </div>
-                        {% endif %}
+                    {% elif state.step == 'complete' %}
+                    <div class="status success">
+                        Deployed to {{ state.server_url }}
                     </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Step 3: Google Assistant -->
+            <div class="step">
+                <div class="step-number {% if state.step == 'complete' %}active{% endif %}">3</div>
+                <div class="step-content">
+                    <div class="step-title">Connect Google Assistant</div>
+                    <div class="step-desc">Configure Smart Home integration</div>
+
+                    {% if state.step == 'complete' %}
+                    <div class="instructions">
+                        <ol>
+                            <li>Go to <a href="https://console.actions.google.com" target="_blank">Google Actions Console</a></li>
+                            <li>Create project → Select <code>{{ state.project_id }}</code></li>
+                            <li>Choose Smart Home → Start Building</li>
+                            <li>Enter these values:</li>
+                        </ol>
+                    </div>
+                    <div class="config-box">
+                        <span class="label">Fulfillment URL:</span><br>
+                        {{ state.server_url }}/api/google_assistant<br><br>
+                        <span class="label">Authorization URL:</span><br>
+                        {{ state.server_url }}/auth/authorize<br><br>
+                        <span class="label">Token URL:</span><br>
+                        {{ state.server_url }}/auth/token<br><br>
+                        <span class="label">Client ID:</span><br>
+                        https://oauth-redirect.googleusercontent.com/r/{{ state.project_id }}
+                    </div>
+                    <div style="margin-top: 16px">
+                        <a href="https://console.actions.google.com" target="_blank" class="btn btn-secondary">
+                            Open Actions Console →
+                        </a>
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -219,74 +253,99 @@
     <script>
         const ingressPath = "{{ ingress_path }}";
 
-        async function loadBillingAccounts() {
-            try {
-                const resp = await fetch(ingressPath + '/api/billing-accounts');
-                const data = await resp.json();
+        // File upload handling
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('keyfile');
 
-                if (data.accounts && data.accounts.length > 0) {
-                    const select = document.getElementById('billing-select');
-                    select.innerHTML = '<option value="">Select a billing account</option>';
-                    data.accounts.forEach(acc => {
-                        const opt = document.createElement('option');
-                        opt.value = acc.name;
-                        opt.textContent = acc.displayName;
-                        select.appendChild(opt);
-                    });
-                    document.getElementById('billing-section').classList.remove('hidden');
+        if (dropzone) {
+            dropzone.addEventListener('click', () => fileInput.click());
+
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('dragover');
+            });
+
+            dropzone.addEventListener('dragleave', () => {
+                dropzone.classList.remove('dragover');
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    handleFile(e.dataTransfer.files[0]);
                 }
-            } catch (e) {
-                console.error('Failed to load billing accounts:', e);
-            }
+            });
+
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length) {
+                    handleFile(fileInput.files[0]);
+                }
+            });
         }
 
-        async function runSetup() {
-            const btn = document.getElementById('deploy-btn');
-            const status = document.getElementById('deploy-status');
-            const billingAccount = document.getElementById('billing-select')?.value;
-
-            btn.disabled = true;
-            btn.innerHTML = '<span class="loader"></span> Deploying...';
+        async function handleFile(file) {
+            const status = document.getElementById('upload-status');
             status.className = 'status info';
-            status.innerHTML = 'Creating project and deploying to Cloud Run...';
-            status.classList.remove('hidden');
+            status.innerHTML = 'Uploading...';
+
+            const formData = new FormData();
+            formData.append('keyfile', file);
 
             try {
-                const resp = await fetch(ingressPath + '/api/setup', {
+                const resp = await fetch(ingressPath + '/api/upload-key', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({billing_account: billingAccount})
+                    body: formData
                 });
-
                 const data = await resp.json();
 
                 if (data.success) {
                     status.className = 'status success';
-                    status.innerHTML = 'Success! Restarting add-on...';
-                    setTimeout(() => location.reload(), 3000);
-                } else if (data.billing_required) {
-                    status.className = 'status error';
-                    status.innerHTML = 'Please select a billing account or <a href="https://console.cloud.google.com/billing" target="_blank" style="color: var(--primary)">create one</a>.';
-                    btn.disabled = false;
-                    btn.innerHTML = 'Deploy Automatically';
+                    status.innerHTML = 'Key uploaded! Reloading...';
+                    setTimeout(() => location.reload(), 1000);
                 } else {
                     status.className = 'status error';
-                    status.innerHTML = 'Error: ' + (data.error || 'Unknown error');
-                    btn.disabled = false;
-                    btn.innerHTML = 'Retry';
+                    status.innerHTML = 'Error: ' + data.error;
                 }
             } catch (e) {
                 status.className = 'status error';
-                status.innerHTML = 'Error: ' + e.message;
-                btn.disabled = false;
-                btn.innerHTML = 'Retry';
+                status.innerHTML = 'Upload failed: ' + e.message;
             }
         }
 
-        // Load billing accounts if authenticated
-        {% if has_token and state.step != 'complete' %}
-        loadBillingAccounts();
-        {% endif %}
+        async function runDeploy() {
+            const btn = document.getElementById('deploy-btn');
+            const status = document.getElementById('deploy-status');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loader"></span> Deploying...';
+            status.className = 'status info';
+            status.innerHTML = 'Enabling APIs and deploying to Cloud Run...<br>This may take 1-2 minutes.';
+
+            try {
+                const resp = await fetch(ingressPath + '/api/deploy', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const data = await resp.json();
+
+                if (data.success) {
+                    status.className = 'status success';
+                    status.innerHTML = 'Success! Tunnel deployed. Restarting...';
+                    setTimeout(() => location.reload(), 3000);
+                } else {
+                    status.className = 'status error';
+                    status.innerHTML = 'Error: ' + data.error;
+                    btn.disabled = false;
+                    btn.innerHTML = '🚀 Retry Deploy';
+                }
+            } catch (e) {
+                status.className = 'status error';
+                status.innerHTML = 'Deploy failed: ' + e.message;
+                btn.disabled = false;
+                btn.innerHTML = '🚀 Retry Deploy';
+            }
+        }
     </script>
 </body>
 </html>

@@ -2,48 +2,33 @@
 """
 GCP Tunnel Auto-Setup Web UI
 
-Handles:
-- Google OAuth flow
-- GCP project creation
-- Cloud Run deployment
-- Automatic configuration
+Uses service account authentication - fully self-contained in user's project.
 """
 
 import os
 import json
 import secrets
-import hashlib
-import base64
-import subprocess
+import time
 from pathlib import Path
-from urllib.parse import urlencode, quote_plus
 
-from flask import Flask, render_template, redirect, request, session, jsonify
+from flask import Flask, render_template, request, jsonify
 import requests
+from google.oauth2 import service_account
+from google.auth.transport.requests import Request
 
 app = Flask(__name__)
 app.secret_key = secrets.token_hex(32)
 
-# OAuth config - using "TV and Limited Input" flow for simplicity
-# No client secret needed, works from any device
-GOOGLE_CLIENT_ID = "292824132082-7a1h7ae29f4aepk6qng3296kdlnpqhea.apps.googleusercontent.com"
-GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-
-# Required OAuth scopes
-SCOPES = [
-    "https://www.googleapis.com/auth/cloud-platform",  # Full GCP access
-    "https://www.googleapis.com/auth/userinfo.email",  # Get user email
-]
-
 # Paths
-CONFIG_DIR = Path("/config")
 DATA_DIR = Path("/data")
-TOKEN_FILE = DATA_DIR / "google_token.json"
+SA_KEY_FILE = DATA_DIR / "service_account.json"
 SETUP_FILE = DATA_DIR / "setup_state.json"
 
 # Pre-built tunnel server image
 TUNNEL_IMAGE = "ghcr.io/bramalkema/gcp-ha-tunnel/tunnel-server:latest"
+
+# Required scopes
+SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 
 
 def get_ingress_path():
@@ -75,30 +60,42 @@ def save_setup_state(state):
     SETUP_FILE.write_text(json.dumps(state, indent=2))
 
 
-def get_token():
-    """Load stored OAuth token."""
-    if TOKEN_FILE.exists():
-        return json.loads(TOKEN_FILE.read_text())
-    return None
+def get_credentials():
+    """Load service account credentials."""
+    if not SA_KEY_FILE.exists():
+        return None
+
+    try:
+        creds = service_account.Credentials.from_service_account_file(
+            str(SA_KEY_FILE), scopes=SCOPES
+        )
+        return creds
+    except Exception as e:
+        print(f"Error loading credentials: {e}")
+        return None
 
 
-def save_token(token):
-    """Save OAuth token."""
-    DATA_DIR.mkdir(exist_ok=True)
-    TOKEN_FILE.write_text(json.dumps(token, indent=2))
+def get_access_token():
+    """Get a valid access token."""
+    creds = get_credentials()
+    if not creds:
+        return None
+
+    # Refresh if needed
+    if not creds.valid:
+        creds.refresh(Request())
+
+    return creds.token
 
 
-def refresh_token_if_needed(token):
-    """Refresh the access token if expired."""
-    # For simplicity, always try to use current token
-    # In production, check expiry and refresh
-    return token
-
-
-def gcp_api(method, url, token, **kwargs):
+def gcp_api(method, url, **kwargs):
     """Make an authenticated GCP API call."""
+    token = get_access_token()
+    if not token:
+        return None
+
     headers = {
-        "Authorization": f"Bearer {token['access_token']}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
     resp = requests.request(method, url, headers=headers, **kwargs)
@@ -109,170 +106,121 @@ def gcp_api(method, url, token, **kwargs):
 def index():
     """Main page - shows setup wizard or status."""
     state = get_setup_state()
-    token = get_token()
+    has_key = SA_KEY_FILE.exists()
+
+    # Get project ID from service account if available
+    project_id = None
+    if has_key:
+        try:
+            sa_data = json.loads(SA_KEY_FILE.read_text())
+            project_id = sa_data.get("project_id")
+        except:
+            pass
 
     return render_template("index.html",
                          state=state,
-                         has_token=token is not None,
+                         has_key=has_key,
+                         project_id=project_id,
                          ingress_path=get_ingress_path())
 
 
-@app.route("/auth/start")
-def auth_start():
-    """Start OAuth flow."""
-    # Generate PKCE challenge
-    code_verifier = secrets.token_urlsafe(64)
-    code_challenge = base64.urlsafe_b64encode(
-        hashlib.sha256(code_verifier.encode()).digest()
-    ).decode().rstrip("=")
-
-    session["code_verifier"] = code_verifier
-
-    # Build auth URL
-    params = {
-        "client_id": GOOGLE_CLIENT_ID,
-        "redirect_uri": request.url_root.rstrip("/") + get_ingress_path() + "/auth/callback",
-        "response_type": "code",
-        "scope": " ".join(SCOPES),
-        "code_challenge": code_challenge,
-        "code_challenge_method": "S256",
-        "access_type": "offline",
-        "prompt": "consent",
-    }
-
-    auth_url = f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
-    return redirect(auth_url)
-
-
-@app.route("/auth/callback")
-def auth_callback():
-    """Handle OAuth callback."""
-    code = request.args.get("code")
-    error = request.args.get("error")
-
-    if error:
-        return render_template("error.html", error=error)
-
-    if not code:
-        return render_template("error.html", error="No authorization code received")
-
-    # Exchange code for token
-    code_verifier = session.get("code_verifier")
-
-    resp = requests.post(GOOGLE_TOKEN_URL, data={
-        "client_id": GOOGLE_CLIENT_ID,
-        "code": code,
-        "code_verifier": code_verifier,
-        "grant_type": "authorization_code",
-        "redirect_uri": request.url_root.rstrip("/") + get_ingress_path() + "/auth/callback",
-    })
-
-    if resp.status_code != 200:
-        return render_template("error.html", error=f"Token exchange failed: {resp.text}")
-
-    token = resp.json()
-    save_token(token)
-
-    # Update state
-    state = get_setup_state()
-    state["step"] = "authenticated"
-    save_setup_state(state)
-
-    return redirect(get_ingress_path() + "/")
-
-
-@app.route("/api/billing-accounts")
-def list_billing_accounts():
-    """List user's billing accounts."""
-    token = get_token()
-    if not token:
-        return jsonify({"error": "Not authenticated"}), 401
-
-    resp = gcp_api("GET",
-                   "https://cloudbilling.googleapis.com/v1/billingAccounts",
-                   token)
-
-    if resp.status_code != 200:
-        return jsonify({"error": resp.text}), resp.status_code
-
-    data = resp.json()
-    accounts = data.get("billingAccounts", [])
-
-    # Filter to open accounts only
-    open_accounts = [a for a in accounts if a.get("open", False)]
-
-    return jsonify({"accounts": open_accounts})
-
-
-@app.route("/api/setup", methods=["POST"])
-def run_setup():
-    """Run the full auto-setup process."""
-    token = get_token()
-    if not token:
-        return jsonify({"error": "Not authenticated"}), 401
-
-    state = get_setup_state()
-
-    # Get or generate values
-    project_id = state.get("project_id") or generate_project_name()
-    password = state.get("password") or generate_password()
-    billing_account = request.json.get("billing_account")
-
-    state["project_id"] = project_id
-    state["password"] = password
-    state["step"] = "creating_project"
-    save_setup_state(state)
-
+@app.route("/api/upload-key", methods=["POST"])
+def upload_key():
+    """Upload service account key."""
     try:
-        # Step 1: Create project
-        resp = gcp_api("POST",
-                      "https://cloudresourcemanager.googleapis.com/v1/projects",
-                      token,
-                      json={"projectId": project_id, "name": "HA Tunnel"})
+        # Handle both file upload and JSON paste
+        if request.files.get("keyfile"):
+            key_data = request.files["keyfile"].read().decode("utf-8")
+        elif request.json and request.json.get("key"):
+            key_data = request.json["key"]
+        else:
+            return jsonify({"error": "No key provided"}), 400
 
-        if resp.status_code not in [200, 409]:  # 409 = already exists
-            return jsonify({"error": f"Failed to create project: {resp.text}"}), 500
+        # Validate JSON
+        try:
+            key_json = json.loads(key_data)
+        except json.JSONDecodeError:
+            return jsonify({"error": "Invalid JSON"}), 400
 
-        state["step"] = "linking_billing"
+        # Check required fields
+        required = ["type", "project_id", "private_key", "client_email"]
+        missing = [f for f in required if f not in key_json]
+        if missing:
+            return jsonify({"error": f"Missing fields: {missing}"}), 400
+
+        if key_json.get("type") != "service_account":
+            return jsonify({"error": "Not a service account key"}), 400
+
+        # Save key
+        DATA_DIR.mkdir(exist_ok=True)
+        SA_KEY_FILE.write_text(json.dumps(key_json, indent=2))
+        SA_KEY_FILE.chmod(0o600)
+
+        # Update state
+        state = get_setup_state()
+        state["step"] = "key_uploaded"
+        state["project_id"] = key_json["project_id"]
         save_setup_state(state)
 
-        # Step 2: Link billing
-        if billing_account:
-            resp = gcp_api("PUT",
-                          f"https://cloudbilling.googleapis.com/v1/projects/{project_id}/billingInfo",
-                          token,
-                          json={"billingAccountName": billing_account})
+        return jsonify({
+            "success": True,
+            "project_id": key_json["project_id"]
+        })
 
-            if resp.status_code != 200:
-                return jsonify({"error": f"Failed to link billing: {resp.text}",
-                              "billing_required": True}), 400
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
+
+@app.route("/api/deploy", methods=["POST"])
+def run_deploy():
+    """Deploy Cloud Run using service account."""
+    if not SA_KEY_FILE.exists():
+        return jsonify({"error": "No service account key uploaded"}), 400
+
+    state = get_setup_state()
+
+    try:
+        sa_data = json.loads(SA_KEY_FILE.read_text())
+        project_id = sa_data["project_id"]
+    except Exception as e:
+        return jsonify({"error": f"Invalid key file: {e}"}), 400
+
+    # Generate password
+    password = state.get("password") or generate_password()
+    state["password"] = password
+    state["project_id"] = project_id
+
+    try:
+        # Step 1: Enable APIs
         state["step"] = "enabling_apis"
         save_setup_state(state)
 
-        # Step 3: Enable APIs
         apis = ["run.googleapis.com", "cloudbuild.googleapis.com"]
         for api in apis:
             resp = gcp_api("POST",
-                          f"https://serviceusage.googleapis.com/v1/projects/{project_id}/services/{api}:enable",
-                          token)
-            # Ignore errors - might already be enabled
+                f"https://serviceusage.googleapis.com/v1/projects/{project_id}/services/{api}:enable")
+            # Ignore errors - might already be enabled or just need time
 
-        # Wait a bit for APIs to propagate
-        import time
+        # Wait for APIs to propagate
         time.sleep(5)
 
+        # Step 2: Deploy Cloud Run
         state["step"] = "deploying"
         save_setup_state(state)
 
-        # Step 4: Deploy Cloud Run
+        region = "us-central1"
+        service_name = "ha-tunnel"
+
+        # Use the v1 API for Cloud Run
         service_config = {
             "apiVersion": "serving.knative.dev/v1",
             "kind": "Service",
             "metadata": {
-                "name": "ha-tunnel",
+                "name": service_name,
+                "namespace": project_id,
                 "annotations": {
-                    "run.googleapis.com/ingress": "all"
+                    "run.googleapis.com/ingress": "all",
+                    "run.googleapis.com/launch-stage": "BETA"
                 }
             },
             "spec": {
@@ -305,45 +253,52 @@ def run_setup():
             }
         }
 
-        # Create or replace service
-        region = "us-central1"
+        # Try to create or replace the service
         resp = gcp_api("POST",
-                      f"https://run.googleapis.com/apis/serving.knative.dev/v1/namespaces/{project_id}/services",
-                      token,
-                      json=service_config)
+            f"https://{region}-run.googleapis.com/apis/serving.knative.dev/v1/namespaces/{project_id}/services",
+            json=service_config)
 
-        if resp.status_code not in [200, 201]:
-            # Try updating existing service
+        if resp and resp.status_code not in [200, 201, 409]:
+            # Try update if create fails
             resp = gcp_api("PUT",
-                          f"https://run.googleapis.com/apis/serving.knative.dev/v1/namespaces/{project_id}/services/ha-tunnel",
-                          token,
-                          json=service_config)
+                f"https://{region}-run.googleapis.com/apis/serving.knative.dev/v1/namespaces/{project_id}/services/{service_name}",
+                json=service_config)
 
-        if resp.status_code not in [200, 201]:
-            return jsonify({"error": f"Failed to deploy: {resp.text}"}), 500
+        if not resp or resp.status_code not in [200, 201]:
+            error_msg = resp.text if resp else "No response"
+            return jsonify({"error": f"Deploy failed: {error_msg}"}), 500
 
-        # Step 5: Make service public (allow unauthenticated)
+        # Wait for deployment
+        time.sleep(10)
+
+        # Step 3: Make service public
+        state["step"] = "configuring"
+        save_setup_state(state)
+
         iam_policy = {
-            "bindings": [{
-                "role": "roles/run.invoker",
-                "members": ["allUsers"]
-            }]
+            "policy": {
+                "bindings": [{
+                    "role": "roles/run.invoker",
+                    "members": ["allUsers"]
+                }]
+            }
         }
 
-        resp = gcp_api("POST",
-                      f"https://run.googleapis.com/v1/projects/{project_id}/locations/{region}/services/ha-tunnel:setIamPolicy",
-                      token,
-                      json={"policy": iam_policy})
+        gcp_api("POST",
+            f"https://run.googleapis.com/v1/projects/{project_id}/locations/{region}/services/{service_name}:setIamPolicy",
+            json=iam_policy)
 
-        # Get service URL
+        # Step 4: Get service URL
         resp = gcp_api("GET",
-                      f"https://run.googleapis.com/v1/projects/{project_id}/locations/{region}/services/ha-tunnel",
-                      token)
+            f"https://run.googleapis.com/v1/projects/{project_id}/locations/{region}/services/{service_name}")
 
-        if resp.status_code == 200:
+        if resp and resp.status_code == 200:
             service_data = resp.json()
             service_url = service_data.get("status", {}).get("url", "")
             state["server_url"] = service_url
+        else:
+            # Construct URL from convention
+            state["server_url"] = f"https://{service_name}-{project_id}.{region}.run.app"
 
         state["step"] = "complete"
         save_setup_state(state)
@@ -359,6 +314,8 @@ def run_setup():
         })
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 
@@ -379,30 +336,41 @@ def update_addon_config(state):
         "google_secure_devices_pin": ""
     }
 
-    resp = requests.post(
-        "http://supervisor/addons/self/options",
-        headers={"Authorization": f"Bearer {supervisor_token}"},
-        json={"options": config}
-    )
-
-    if resp.status_code == 200:
-        # Restart add-on to apply config
-        requests.post(
-            "http://supervisor/addons/self/restart",
-            headers={"Authorization": f"Bearer {supervisor_token}"}
+    try:
+        resp = requests.post(
+            "http://supervisor/addons/self/options",
+            headers={"Authorization": f"Bearer {supervisor_token}"},
+            json={"options": config}
         )
+
+        if resp.status_code == 200:
+            # Restart add-on to apply config
+            requests.post(
+                "http://supervisor/addons/self/restart",
+                headers={"Authorization": f"Bearer {supervisor_token}"}
+            )
+    except Exception as e:
+        print(f"Failed to update config: {e}")
 
 
 @app.route("/api/status")
 def get_status():
     """Get current setup status."""
     state = get_setup_state()
-    token = get_token()
+    has_key = SA_KEY_FILE.exists()
+
+    project_id = None
+    if has_key:
+        try:
+            sa_data = json.loads(SA_KEY_FILE.read_text())
+            project_id = sa_data.get("project_id")
+        except:
+            pass
 
     return jsonify({
-        "authenticated": token is not None,
+        "has_key": has_key,
+        "project_id": project_id,
         "step": state.get("step", "start"),
-        "project_id": state.get("project_id"),
         "server_url": state.get("server_url"),
         "has_password": state.get("password") is not None
     })
