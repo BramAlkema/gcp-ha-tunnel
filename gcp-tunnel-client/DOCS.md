@@ -26,6 +26,8 @@ The add-on runs a [chisel](https://github.com/jpillora/chisel) client that conne
 | `local_port` | Local HA port to tunnel | `8123` |
 | `keepalive` | WebSocket keepalive interval | `25s` |
 | `log_level` | Log verbosity | `info` |
+| `google_project_id` | Google Cloud project ID (enables auto-config) | Optional |
+| `google_secure_devices_pin` | PIN for secure devices (locks, etc.) | Optional |
 
 ## Example Configuration
 
@@ -36,7 +38,23 @@ auth_pass: "your-secure-password"
 local_port: 8123
 keepalive: "25s"
 log_level: "info"
+# Optional: Auto-configure Google Assistant
+google_project_id: "your-gcp-project-id"
+google_secure_devices_pin: "1234"
 ```
+
+## Google Assistant Auto-Configuration
+
+When you provide `google_project_id`, the add-on automatically creates:
+- `/config/packages/gcp_tunnel_google_assistant.yaml`
+
+**One-time setup required:** Add this to your `configuration.yaml`:
+```yaml
+homeassistant:
+  packages: !include_dir_named packages
+```
+
+Then restart Home Assistant Core. The add-on will manage the Google Assistant configuration automatically.
 
 ## Setup
 

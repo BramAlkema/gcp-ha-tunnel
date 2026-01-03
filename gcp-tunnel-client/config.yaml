@@ -26,6 +26,9 @@ options:
   local_port: 8123
   keepalive: "25s"
   log_level: "info"
+  # Google Assistant auto-configuration (optional)
+  google_project_id: ""
+  google_secure_devices_pin: ""
 
 # Schema validation
 schema:
@@ -35,6 +38,8 @@ schema:
   local_port: int(1,65535)
   keepalive: match(^\d+[smh]$)
   log_level: list(debug|info|warning|error)
+  google_project_id: str?
+  google_secure_devices_pin: str?
 
 # No ports exposed - outbound tunnel only
 ports: {}
@@ -44,9 +49,9 @@ ports_description: {}
 # Use normal Docker networking - connects to HA Core via internal DNS
 # host_network: true  # Disabled - internal networking works better
 
-# Map config folder for potential future use
+# Map config folder with write access for packages
 map:
-  - config:ro
+  - config:rw
 
 # Watchdog to restart on failure
 watchdog: tcp://[HOST]:[PORT:8123]
