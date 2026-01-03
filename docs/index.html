@@ -131,22 +131,49 @@
         </header>
 
         <div class="diagram">
-<pre>
-┌─────────────────────────────────────┐
-│      YOUR GOOGLE CLOUD PROJECT      │
-│                                     │
-│   ┌─────────┐      ┌─────────┐     │
-│   │ BOUNCER │      │ BUTLER  │     │
-│   │ Security│      │ Cache   │     │
-│   └────┬────┘      └────┬────┘     │
-│        └───────┬────────┘          │
-└────────────────┼───────────────────┘
-                 │ tunnel
-         ┌───────▼───────┐
-         │ HOME ASSISTANT │
-         └───────────────┘
-</pre>
+            <pre class="mermaid">
+flowchart TB
+    subgraph cloud["☁️ YOUR GOOGLE CLOUD PROJECT"]
+        direction LR
+        subgraph edge["Edge Layer"]
+            bouncer["🔒 BOUNCER<br/>Rate Limit • Auth • Filter"]
+            butler["🤵 BUTLER<br/>Cache • Log • Fallback"]
+        end
+    end
+
+    google["🎙️ Google Assistant"]
+    alexa["🔊 Amazon Alexa"]
+    phone["📱 Remote UI"]
+    ha["🏠 HOME ASSISTANT"]
+
+    google --> cloud
+    alexa --> cloud
+    phone --> cloud
+    cloud -->|"tunnel"| ha
+            </pre>
         </div>
+        <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+        <script>
+            mermaid.initialize({
+                startOnLoad: true,
+                theme: 'dark',
+                themeVariables: {
+                    primaryColor: '#03a9f4',
+                    primaryTextColor: '#e6edf3',
+                    primaryBorderColor: '#30363d',
+                    lineColor: '#8b949e',
+                    secondaryColor: '#161b22',
+                    tertiaryColor: '#0d1117',
+                    background: '#161b22',
+                    mainBkg: '#161b22',
+                    nodeBorder: '#30363d',
+                    clusterBkg: '#1c2128',
+                    clusterBorder: '#30363d',
+                    titleColor: '#e6edf3',
+                    edgeLabelBackground: '#161b22'
+                }
+            });
+        </script>
 
         <div class="features">
             <div class="feature">
