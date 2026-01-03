@@ -28,6 +28,8 @@ shutdown() {
         kill -TERM "$chisel_pid" 2>/dev/null || true
         wait "$chisel_pid" 2>/dev/null || true
     fi
+    # Also stop socat proxy
+    pkill -f "socat.*TCP-LISTEN:8888" 2>/dev/null || true
     bashio::log.info "Tunnel stopped"
     exit 0
 }
@@ -105,10 +107,9 @@ build_chisel_args() {
     # nginx on Cloud Run listens on :8080, proxies HTTP to :9001
     # chisel listens on :9000 for WebSocket control
     # Format: R:remote_port:local_host:local_port
-    # Reverse tunnel: server listens on 9001, forwards to HA Core container
-    # Use 'homeassistant' hostname - Docker internal DNS resolves to HA Core
-    # This works because add-ons share Docker network with HA Core (no SSL internally)
-    CHISEL_ARGS+=("R:9001:homeassistant:${LOCAL_PORT}")
+    # Reverse tunnel: server listens on 9001, forwards to local socat proxy (8888)
+    # socat handles HTTP->HTTPS conversion for HA Core (which requires SSL)
+    CHISEL_ARGS+=("R:9001:127.0.0.1:8888")
 }
 
 # Calculate backoff with jitter
@@ -140,6 +141,30 @@ reset_backoff() {
     consecutive_failures=0
 }
 
+# Start socat SSL proxy
+# Listens on port 8888, forwards to HA Core via HTTPS
+start_socat_proxy() {
+    bashio::log.info "Starting socat SSL proxy (8888 -> homeassistant:8123 HTTPS)..."
+
+    # Kill any existing socat
+    pkill -f "socat.*TCP-LISTEN:8888" 2>/dev/null || true
+
+    # Start socat in background
+    # TCP-LISTEN: accept plain HTTP on 8888
+    # OPENSSL: connect to HA with SSL, verify=0 to skip cert validation (internal)
+    socat TCP-LISTEN:8888,fork,reuseaddr OPENSSL:homeassistant:8123,verify=0 &
+    socat_pid=$!
+
+    bashio::log.info "socat started with PID: $socat_pid"
+    sleep 1
+
+    # Verify it's running
+    if ! kill -0 "$socat_pid" 2>/dev/null; then
+        bashio::log.error "socat failed to start"
+        return 1
+    fi
+}
+
 # Run chisel and monitor
 run_tunnel() {
     bashio::log.info "Starting chisel client..."
@@ -149,7 +174,7 @@ run_tunnel() {
     bashio::log.info "User: $AUTH_USER"
     bashio::log.info "Local port: $LOCAL_PORT"
     bashio::log.info "Keepalive: $KEEPALIVE"
-    bashio::log.info "Tunnel: R:9001:homeassistant:${LOCAL_PORT}"
+    bashio::log.info "Tunnel: R:9001:127.0.0.1:8888 (via socat -> homeassistant:8123 HTTPS)"
 
     # Start chisel in background
     /usr/local/bin/chisel "${CHISEL_ARGS[@]}" &
@@ -184,6 +209,12 @@ main() {
     # Read configuration
     read_config
     build_chisel_args
+
+    # Start socat SSL proxy (converts HTTP to HTTPS for HA Core)
+    if ! start_socat_proxy; then
+        bashio::log.fatal "Failed to start socat SSL proxy"
+        exit 1
+    fi
 
     # Main reconnect loop
     while true; do

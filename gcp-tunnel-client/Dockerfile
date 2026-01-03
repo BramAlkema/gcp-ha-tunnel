@@ -12,10 +12,12 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 
 # Install dependencies and chisel
+# socat is needed to proxy HTTP->HTTPS to HA Core (which requires SSL)
 RUN apk add --no-cache \
         curl \
         ca-certificates \
         jq \
+        socat \
     && case "${TARGETARCH}${TARGETVARIANT}" in \
         "amd64") CHISEL_ARCH="amd64" ;; \
         "arm64") CHISEL_ARCH="arm64" ;; \
