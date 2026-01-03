@@ -45,16 +45,11 @@ google_secure_devices_pin: "1234"
 
 ## Google Assistant Auto-Configuration
 
-When you provide `google_project_id`, the add-on automatically creates:
-- `/config/packages/gcp_tunnel_google_assistant.yaml`
+When you provide `google_project_id`, the add-on automatically:
+1. Creates `/config/packages/gcp_tunnel_google_assistant.yaml`
+2. Adds `packages: !include_dir_named packages` to your `configuration.yaml`
 
-**One-time setup required:** Add this to your `configuration.yaml`:
-```yaml
-homeassistant:
-  packages: !include_dir_named packages
-```
-
-Then restart Home Assistant Core. The add-on will manage the Google Assistant configuration automatically.
+**Just restart Home Assistant Core** after setting the project ID - everything else is automatic.
 
 ## Setup
 
