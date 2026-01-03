@@ -23,6 +23,7 @@ RUN apk add --no-cache \
         flask \
         requests \
         google-auth \
+        gunicorn \
     && case "${TARGETARCH}${TARGETVARIANT}" in \
         "amd64") CHISEL_ARCH="amd64" ;; \
         "arm64") CHISEL_ARCH="arm64" ;; \

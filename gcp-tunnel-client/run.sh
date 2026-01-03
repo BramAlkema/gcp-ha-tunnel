@@ -627,7 +627,7 @@ run_tunnel() {
 start_webapp() {
     bashio::log.info "Starting setup web UI on port 8099..."
     cd /webapp
-    python3 app.py &
+    gunicorn --bind 0.0.0.0:8099 --workers 1 --threads 2 --timeout 30 app:app &
     webapp_pid=$!
     bashio::log.info "Web UI started (pid: $webapp_pid)"
 }

@@ -2,7 +2,7 @@
 # https://developers.home-assistant.io/docs/add-ons/configuration
 
 name: GCP Tunnel Client
-version: "2.1.0"
+version: "2.1.1"
 slug: gcp_tunnel_client
 description: >-
   Secure tunnel to Google Cloud Run for external Home Assistant access.
