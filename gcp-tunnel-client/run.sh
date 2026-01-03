@@ -147,7 +147,7 @@ run_tunnel() {
     bashio::log.info "User: $AUTH_USER"
     bashio::log.info "Local port: $LOCAL_PORT"
     bashio::log.info "Keepalive: $KEEPALIVE"
-    bashio::log.info "Tunnel: R:8080:localhost:${LOCAL_PORT}"
+    bashio::log.info "Tunnel: R:9001:localhost:${LOCAL_PORT}"
 
     # Start chisel in background
     /usr/local/bin/chisel "${CHISEL_ARGS[@]}" &
