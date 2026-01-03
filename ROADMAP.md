@@ -23,9 +23,9 @@
   - Option B: nginx SSL termination to HA ✓
   - Simplify add-on architecture
 
-- [ ] **2.2 Health endpoint in add-on**
-  - `/health` endpoint for watchdog
-  - Expose tunnel status to HA sensors
+- [x] **2.2 Health endpoint in add-on**
+  - `/health` endpoint for monitoring ✓
+  - Returns tunnel_connected, proxy_running, setup status
 
 - [ ] **2.3 Better error messages**
   - Detect common failures (wrong URL, bad auth, HA down)
@@ -38,10 +38,10 @@
 
 ## Phase 3: Features
 
-- [ ] **3.1 Report state (push updates)**
-  - Service account integration
-  - Real-time device state sync to Google
-  - Reduces latency for status queries
+- [x] **3.1 Report state (push updates)**
+  - Uses HA's built-in service account integration ✓
+  - Leverages HA's JWT generation, token refresh, batching ✓
+  - Just configure, don't reinvent
 
 - [ ] **3.2 Entity filtering UI**
   - Add-on web UI to select entities

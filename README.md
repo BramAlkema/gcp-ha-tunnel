@@ -4,140 +4,124 @@
 
 Secure tunnel to Google Cloud Run for external Home Assistant access. No port forwarding required.
 
+## Why Use This?
+
+| Method | Cost | Port Forward | Complexity |
+|--------|------|--------------|------------|
+| Nabu Casa | $6.50/mo | No | Zero |
+| DuckDNS | Free | **Yes** | Medium |
+| **This** | Free* | **No** | Medium |
+
+*Free tier covers typical home use
+
+**Best for:** CGNAT, apartments, corporate networks - anywhere port forwarding isn't possible.
+
+## How It Works
+
+```
+Google Assistant  →  Cloud Run (free)  →  Tunnel  →  Home Assistant
+                         ↑                   ↑
+                    Public HTTPS        chisel WebSocket
+```
+
+Uses [Home Assistant's built-in Google Assistant integration](https://www.home-assistant.io/integrations/google_assistant/) - we just provide the network path.
+
+## Quick Start
+
+### 1. Install Add-on
+
+Click the badge above, or:
+1. **Settings** → **Add-ons** → **Add-on Store** → ⋮ → **Repositories**
+2. Add: `https://github.com/BramAlkema/gcp-ha-tunnel`
+3. Install **GCP Tunnel Client**
+
+### 2. Setup via Web UI
+
+1. Open the **GCP Tunnel** panel in Home Assistant sidebar
+2. Follow the 3-step wizard:
+   - Create GCP project + service account
+   - Upload service account key
+   - Click **Deploy** → tunnel auto-deploys
+
+### 3. Connect Google Assistant
+
+After deploy, the UI shows exact URLs to paste into [Google Actions Console](https://console.actions.google.com):
+
+```
+Fulfillment URL:   https://YOUR-URL/api/google_assistant
+Authorization URL: https://YOUR-URL/auth/authorize
+Token URL:         https://YOUR-URL/auth/token
+Client ID:         https://oauth-redirect.googleusercontent.com/r/YOUR-PROJECT
+```
+
+### 4. Link in Google Home
+
+Google Home app → + → **Set up device** → **Works with Google** → Search `[test] your-project`
+
 ## Features
 
-- **Free** - Uses Google Cloud Run free tier
-- **Secure** - All traffic over HTTPS/WSS
-- **No port forwarding** - Works behind CGNAT, firewalls
-- **Google Assistant** - Enables Google Home integration
+- **One-click deploy** - Web UI deploys Cloud Run automatically
+- **Auto-config** - Configures HA's google_assistant integration
+- **Report state** - Push updates to Google (via HA's built-in batching)
+- **Health endpoint** - `/health` for monitoring
 - **Auto-reconnect** - Exponential backoff on disconnect
 
 ## Architecture
 
 ```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Google Home /  │────▶│   Cloud Run     │────▶│ Home Assistant  │
-│  External User  │     │  (nginx+chisel) │     │  (this add-on)  │
-└─────────────────┘     └─────────────────┘     └─────────────────┘
-        HTTPS              WebSocket              localhost:8123
-```
-
-## Installation
-
-### Add Repository to Home Assistant
-
-Click the button above, or manually:
-
-1. Go to **Settings** → **Add-ons** → **Add-on Store**
-2. Click ⋮ (menu) → **Repositories**
-3. Add: `https://github.com/BramAlkema/gcp-ha-tunnel`
-4. Click **Add** → **Close**
-5. Refresh the page
-6. Find **GCP Tunnel Client** and click **Install**
-
-### Deploy Cloud Run Server
-
-```bash
-# Clone this repo
-git clone https://github.com/BramAlkema/gcp-ha-tunnel
-cd gcp-ha-tunnel
-
-# Run setup (requires gcloud CLI)
-./scripts/gcp-ha-setup.sh
-```
-
-This outputs `tunnel_config.env` with your credentials.
-
-### Configure Add-on
-
-```yaml
-server_url: "https://ha-tunnel-xxxxx.us-central1.run.app"
-auth_user: "hauser"
-auth_pass: "your-generated-password"
-local_port: 8123
-keepalive: "25s"
-log_level: "info"
-```
-
-### Start
-
-Click **Start** and check logs for `Connected`.
-
-## Google Assistant Setup
-
-Full guide: [actions-config/SETUP.md](actions-config/SETUP.md)
-
-**Google Home Developer Console URLs:**
-```
-Create project:     https://console.home.google.com/projects/create
-Company profile:    https://console.home.google.com/projects/<slug>/company-profile
-Integration setup:  https://console.home.google.com/projects/<slug>/cloud-to-cloud/setup
-Testing:            https://console.home.google.com/projects/<slug>/cloud-to-cloud/test
-```
-
-**OAuth Configuration:**
-```
-Fulfillment URL:  https://YOUR-CLOUD-RUN-URL/api/google_assistant
-Auth URL:         https://YOUR-CLOUD-RUN-URL/auth/authorize
-Token URL:        https://YOUR-CLOUD-RUN-URL/auth/token
-Client ID:        https://oauth-redirect.googleusercontent.com/r/YOUR-GCP-PROJECT-ID
-```
-
-## Add-ons
-
-| Add-on | Description |
-|--------|-------------|
-| [GCP Tunnel Client](gcp-tunnel-client/) | Chisel client connecting to Cloud Run |
-
-## Repository Structure
-
-```
 gcp-ha-tunnel/
-├── gcp-tunnel-client/     # Home Assistant add-on
-│   ├── config.yaml
-│   ├── Dockerfile
-│   ├── run.sh
-│   └── DOCS.md
-├── cloud-run/             # Cloud Run server files
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   └── static/            # Privacy policy, logos
-├── scripts/
-│   └── gcp-ha-setup.sh    # Automated deployment
-├── actions-config/
-│   └── SETUP.md           # Google Home setup guide
-└── adr/
-    └── 001-*.md           # Architecture decisions
+├── gcp-tunnel-client/     # HA Add-on
+│   ├── webapp/            # Setup wizard UI
+│   ├── run.sh             # Tunnel + HA config
+│   └── nginx.conf         # HTTP→HTTPS proxy
+├── cloud-run/             # Tunnel server
+│   ├── nginx.conf         # Routing + OAuth fixes
+│   └── static/            # Privacy policy
+└── .github/workflows/     # Builds tunnel-server image
 ```
 
 ## Costs
 
-Typical usage stays within GCP free tier:
+| Resource | Free Tier | Your Usage |
+|----------|-----------|------------|
+| Requests | 2M/month | ~50K |
+| CPU | 180K vCPU-sec | ~10K |
+| Memory | 360K GiB-sec | ~50K |
 
-| Resource | Free Tier | Typical Usage |
-|----------|-----------|---------------|
-| Requests | 2M/month | ~50K/month |
-| CPU | 180K vCPU-sec | ~10K vCPU-sec |
-| Egress | 1 GB | ~500 MB |
+**Expected: $0/month**
 
-**Expected cost: $0/month**
+## Health Endpoint
 
-## Limitations
+```bash
+curl http://homeassistant.local:8099/health
+```
 
-- **60-min WebSocket timeout** - Auto-reconnects (brief interruption)
-- **Cold starts** - 2-5s delay after idle period
-- **Single region** - Deploy closest to your location
+Returns:
+```json
+{
+  "status": "healthy",
+  "tunnel_connected": true,
+  "proxy_running": true,
+  "report_state_enabled": true
+}
+```
 
 ## Troubleshooting
 
-### Tunnel won't connect
-- Check add-on logs in HA
-- Verify Cloud Run is running: `curl https://YOUR-URL/health`
+**Tunnel won't connect:**
+- Check add-on logs
+- Verify Cloud Run: `curl https://YOUR-URL/health`
+- Check auth credentials match
 
-### Google Assistant errors
-- Ensure tunnel is connected
+**Google Assistant errors:**
+- Ensure tunnel shows "Connected" in logs
+- Re-link account in Google Home app
 - Check HA logs for `google_assistant` errors
-- Re-link in Google Home app
+
+**Report state not working:**
+- Upload service account key via web UI
+- Restart add-on after upload
+- Check HA logs for HomeGraph errors
 
 ## License
 

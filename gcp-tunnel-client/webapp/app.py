@@ -376,5 +376,39 @@ def get_status():
     })
 
 
+@app.route("/health")
+def health():
+    """Health endpoint for monitoring and HA sensors."""
+    import subprocess
+
+    state = get_setup_state()
+
+    # Check if chisel tunnel is running
+    tunnel_connected = False
+    try:
+        result = subprocess.run(["pgrep", "-x", "chisel"], capture_output=True)
+        tunnel_connected = result.returncode == 0
+    except:
+        pass
+
+    # Check if nginx proxy is running
+    proxy_running = False
+    try:
+        result = subprocess.run(["pgrep", "-x", "nginx"], capture_output=True)
+        proxy_running = result.returncode == 0
+    except:
+        pass
+
+    return jsonify({
+        "status": "healthy" if tunnel_connected else "disconnected",
+        "tunnel_connected": tunnel_connected,
+        "proxy_running": proxy_running,
+        "server_url": state.get("server_url"),
+        "project_id": state.get("project_id"),
+        "report_state_enabled": SA_KEY_FILE.exists(),
+        "setup_complete": state.get("step") == "complete"
+    })
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8099, debug=False)
